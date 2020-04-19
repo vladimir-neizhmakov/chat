@@ -4,6 +4,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.*;
 
 public class ClientGUI extends JFrame implements ActionListener, Thread.UncaughtExceptionHandler {
 
@@ -25,6 +26,21 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
     private final JButton btnSend = new JButton("Send");
 
     private final JList<String> userList = new JList<>();
+
+    //Запись лога в файл
+    private void WriteToFile(String fileName, String text) throws IOException {
+        PrintStream ps = new PrintStream(new FileOutputStream(fileName,true));
+        ps.println(text);
+        ps.flush();
+        ps.close();
+    }
+    //Чтение лога из файла
+    private String ReadFromFile(String fileName) throws IOException {
+        FileInputStream ps = new FileInputStream(fileName);
+        String str= new String(ps.readAllBytes());
+        ps.close();
+        return str;
+    }
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(new Runnable() {
@@ -50,8 +66,17 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         log.setLineWrap(true);
         log.setWrapStyleWord(true);
         log.setEditable(false);
-        cbAlwaysOnTop.addActionListener(this);
+        //Читаем лог
+        try{log.append(ReadFromFile("log.txt"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
+        cbAlwaysOnTop.addActionListener(this);
+        //Добавляем обработчик текстового ввод
+        tfMessage.addActionListener(this);
+        //Добавляем обработчик кнопки отправить
+        btnSend.addActionListener(this);
         panelTop.add(tfIPAddress);
         panelTop.add(tfPort);
         panelTop.add(cbAlwaysOnTop);
@@ -74,7 +99,16 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         Object src = e.getSource();
         if (src == cbAlwaysOnTop) {
             setAlwaysOnTop(cbAlwaysOnTop.isSelected());
-        } else {
+        }  else if ((src == tfMessage) || (src == btnSend)) { //Обрабатывам нажатие кнопки отправить и enter
+            String chatText = "Дата " + tfLogin.getText()+": "+tfMessage.getText()+"\n";
+            log.append(chatText);
+            tfMessage.setText("");
+            try{
+                WriteToFile("log.txt",chatText);
+            }  catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }  else {
             throw new RuntimeException("Unknown source:" + src);
         }
     }
